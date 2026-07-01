@@ -782,7 +782,8 @@ RUN --mount=type=cache,target=/opt/uv/cache \
 ARG FLASHINFER_VERSION=0.6.12
 RUN --mount=type=cache,target=/opt/uv/cache \
     uv pip install --system flashinfer-jit-cache==${FLASHINFER_VERSION} \
-        --index-url https://flashinfer.ai/whl/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.')
+        --index-url https://flashinfer.ai/whl/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.') \
+    || echo "WARN: no prebuilt flashinfer-jit-cache for cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.') (e.g. cu132 has no index); runtime JIT via flashinfer-python will be used"
 
 # ============================================================
 # OPENAI API SERVER DEPENDENCIES
@@ -882,7 +883,7 @@ RUN --mount=type=cache,target=/opt/uv/cache \
 # those can reinstall/touch flashinfer packages. Downloading cubins earlier
 # (in the flashinfer-jit-cache layer) causes ~2.5 GB of layer duplication
 # when a later pip install overwrites flashinfer package files.
-RUN flashinfer show-config && flashinfer download-cubin
+RUN flashinfer show-config && { flashinfer download-cubin || echo "WARN: flashinfer download-cubin failed (no cubins for this arch/CUDA); runtime JIT will compile on demand"; }
 
 # CUDA image changed from /usr/local/nvidia to /usr/local/cuda in 12.8 but will
 # return to /usr/local/nvidia in 13.0 to allow container providers to mount drivers
