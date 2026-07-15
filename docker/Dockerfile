@@ -816,9 +816,17 @@ RUN --mount=type=cache,target=/opt/uv/cache \
 # https://docs.flashinfer.ai/installation.html
 # From versions.json: .flashinfer.version
 ARG FLASHINFER_VERSION=0.6.13
+# === AUDIO-LEAN (adem/vllm-audio-cu130-sm120) ===
+# FlashInfer JIT cache ABSICHTLICH WEGGELASSEN: liefert prebuilt MoE-Kernels
+# (nur holo/35b/122b). Qwen3-ASR-1.7B ist DENSE -> totes Gewicht (~1.5GB), und
+# das Weglassen sidesteppt den fehlenden cu132-flashinfer-Index. Original war:
+#   uv pip install --system flashinfer-jit-cache==${FLASHINFER_VERSION} --index-url https://flashinfer.ai/whl/cuXXX
+# Stattdessen: audio-Deps aequivalent zu vllm[audio] (setup.py extra: av,scipy,
+# soundfile,soxr,mistral_common). av (pyav) ist Pflicht — vLLMs Default-Decode +
+# Resample (audio_resample_method=pyav). librosa zusaetzlich. mistral_common
+# (Voxtral-spezifisch) weggelassen — Qwen3-ASR braucht es nicht (lean).
 RUN --mount=type=cache,target=/opt/uv/cache \
-    uv pip install --system flashinfer-jit-cache==${FLASHINFER_VERSION} \
-        --index-url https://flashinfer.ai/whl/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.')
+    uv pip install --system av scipy soundfile soxr librosa
 
 # ============================================================
 # OPENAI API SERVER DEPENDENCIES
