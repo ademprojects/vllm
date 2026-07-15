@@ -816,9 +816,16 @@ RUN --mount=type=cache,target=/opt/uv/cache \
 # https://docs.flashinfer.ai/installation.html
 # From versions.json: .flashinfer.version
 ARG FLASHINFER_VERSION=0.6.13
+# cu132 hat kein prebuilt flashinfer-jit-cache (flashinfer.ai/whl/cu132 = 404, Upstream #3632).
+# FLASHINFER_INDEX_CUDA erlaubt cuXXX-Override (z.B. cu130-Wheel, Minor-kompatibel);
+# FLASHINFER_JIT_CACHE_INDEX ueberschreibt die KOMPLETTE Index-URL (z.B. eigene Registry
+# mit selbstgebautem +cu132-Wheel). Prioritaet: JIT_CACHE_INDEX > INDEX_CUDA > CUDA_VERSION.
+ARG FLASHINFER_INDEX_CUDA=
+ARG FLASHINFER_JIT_CACHE_INDEX=
 RUN --mount=type=cache,target=/opt/uv/cache \
+    FI_CU="${FLASHINFER_INDEX_CUDA:-cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.')}" && \
     uv pip install --system flashinfer-jit-cache==${FLASHINFER_VERSION} \
-        --index-url https://flashinfer.ai/whl/cu$(echo $CUDA_VERSION | cut -d. -f1,2 | tr -d '.')
+        --index-url "${FLASHINFER_JIT_CACHE_INDEX:-https://flashinfer.ai/whl/${FI_CU}}"
 
 # ============================================================
 # OPENAI API SERVER DEPENDENCIES
